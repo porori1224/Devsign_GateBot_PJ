@@ -1,16 +1,13 @@
 import discord
+import time
 from discord.ext import commands
 import RPi.GPIO as GPIO
-from bluetooth import BluetoothSocket, RFCOMM
 
-#TOKEN  = 'MTI5OTI5ODE1MDE0NTg1MTQxMg.GhKUnJ.G46DFlFNE8nkAyTdougkJ5mNobOK0onhKRu4ZU'
+TOKEN  = 'MTI5OTI5ODE1MDE0NTg1MTQxMg.GhKUnJ.G46DFlFNE8nkAyTdougkJ5mNobOK0onhKRu4ZU'
 DOOR_PIN = 17
 
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(DOOR_PIN, GPIO.OUT)
-
-def unlock_door():
-    GPIO.output(DOOR_PIN, GPIO.HIGH)
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -19,21 +16,19 @@ intents.members = True
 
 bot = commands.Bot(command_prefix="!", intents = intents)
 
-#AUTHORIZED_ROLE_ID = 1304768806782107658
-#CONTROL_EMOJI = ""
-#CHANNEL_ID = 1299379824585871382
+AUTHORIZED_ROLE_ID = 1304768806782107658
+CONTROL_EMOJI = ""
+CHANNEL_ID = 1299379824585871382
 
 
 def unlock_door():
    try:
-      #sock = BluetoothSocket(RFCOMM)
-      #sock.connect((DOORLCK_BLUETOOTH_ADDRESS, 1))
-      
-      #sock.send("unlock")
+
+      GPIO.output(DOOR_PIN, GPIO.LOW)
+      time.sleep(3)
       GPIO.output(DOOR_PIN, GPIO.HIGH)
       print("도어락 열기 명령 전송 완료")
       
-      #sock.close()
    except Exception as e:
       print(f"도어락 제어 실패: {e}")
 
