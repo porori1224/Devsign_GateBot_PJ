@@ -1,0 +1,29 @@
+//cpp 아두이노 코드에서 라즈베리파이로 블루투스 신호를 수신, 신호에 따라 도어락 제어 테스트 코드
+
+#include <SoftwareSerial.h>
+
+SoftwareSerial BTSerial(2, 3); // RX, TX 핀 설정
+
+const int doorPin = 7; // 도어락 제어 핀
+
+void setup() {
+  pinMode(doorPin, OUTPUT);
+  digitalWrite(doorPin, LOW);  // 기본 상태는 잠금 상태
+  Serial.begin(9600);
+  BTSerial.begin(9600); // HC-05 기본 통신 속도
+  Serial.println("블루투스 모듈이 준비되었습니다.");
+}
+
+void loop() {
+  if (BTSerial.available()) {
+    String command = BTSerial.readString();  // 라즈베리파이에서 명령 수신
+    Serial.println("수신된 명령: " + command);
+
+    if (command == "unlock") {
+      Serial.println("도어락을 엽니다.");
+      digitalWrite(doorPin, HIGH);  // 도어락 열림
+      delay(5000);  // 5초간 열림 유지
+      digitalWrite(doorPin, LOW);   // 도어락 잠금
+    }
+  }
+}
