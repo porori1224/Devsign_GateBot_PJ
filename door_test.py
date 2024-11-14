@@ -1,3 +1,5 @@
+# 물리적 연결 시 테스트 코드
+
 import RPi.GPIO as GPIO
 import time
 
