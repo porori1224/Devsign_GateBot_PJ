@@ -111,7 +111,7 @@ async def on_reaction_add(reaction, user):
       
          unlock_door()
       else:
-         await reaction.message.channel.send("도어락을 제어할 권한이 없습니다.")    # 간부진 역할자가 아닌 사람이 이모지를 남겼을 때 문열어주세요 채널에 알림
+         await reaction.message.channel.send("도어락을 제어할 권한이 없습니다.")    # 해당 사용자한테만 역할자가 아닌 사람이 이모지를 남겼을 때 문열어주세요 채널에 알림
 
 
 
@@ -121,7 +121,7 @@ async def on_error(event, *args, **kwargs):
     # 예외 발생 시 지정(간부진) 채널에 알림 전송
     channel = bot.get_channel(CHANNEL_ID)
     if channel is not None:
-        await channel.send("⚠️ 시스템 오류가 발생하여 봇이 작동을 멈췄습니다. 확인이 필요합니다.")
+        await channel.send("⚠️ 시스템 오류가 발생하여 봇이 작동을 멈췄습니다. 확인이 필요합니다.") #간부
 
 
 
