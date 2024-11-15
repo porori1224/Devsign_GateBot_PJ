@@ -16,7 +16,7 @@ AUTHORIZED_ROLE_ID = 1304768806782107658    # 간부진 권한(역할) ID
 CONTROL_EMOJI = "🔓"
 CHANNEL_ID = 1299379824585871382    # 간부진 채널 ID
 
-BT_ADDR = "XX:XX:XX:XX:XX:XX"  # 블루투스 모듈의 MAC 주소
+BT_ADDR = "00:18:E4:36:13:7A"  # 블루투스 모듈의 MAC 주소
 BT_PORT = 1  # HC-05 기본 포트
 
 # GPIO 설정
