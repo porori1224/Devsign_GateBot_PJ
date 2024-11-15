@@ -2,9 +2,10 @@
 
 #include <SoftwareSerial.h>
 
-SoftwareSerial BTSerial(2, 3); // RX, TX 핀 설정
+SoftwareSerial BTSerial(10, 11); // RX, TX 핀 설정
 
 const int doorPin = 7; // 도어락 제어 핀
+const int consant5VPin = 8; //상시 5V 출력 핀
 
 void setup() {
   pinMode(doorPin, OUTPUT);
