@@ -37,7 +37,7 @@ def unlock_door():
     try:
         # GPIO로 도어락 제어
         GPIO.output(DOOR_PIN, GPIO.LOW)   # 전류 ON
-        time.sleep(3) #3초 동안 전류 흐름
+        time.sleep(1) #1초 동안 전류 흐름
         GPIO.output(DOOR_PIN, GPIO.HIGH)  # 전류 OFF
         print("도어락 열기 명령 전송 완료")   # 실행 터미널에 출력
       

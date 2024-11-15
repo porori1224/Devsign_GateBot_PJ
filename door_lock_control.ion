@@ -23,8 +23,10 @@ void loop() {
     if (command == "unlock") {
       Serial.println("도어락을 엽니다.");
       digitalWrite(doorPin, HIGH);  // 도어락 열림
-      delay(5000);  // 5초간 열림 유지
+      delay(2000);  // 2초간 열림 유지
       digitalWrite(doorPin, LOW);   // 도어락 잠금
     }
   }
+
+  digitalWrite(consant5VPin, HIGH)
 }
