@@ -7,8 +7,8 @@ import asyncio
 import os
 from dotenv import load_dotenv
 
-
-
+# .env 파일에서 환경 변수 불러오기
+load_dotenv()
 TOKEN  = os.getenv('DISCORD_BOT_TOKEN')
 DOOR_PIN = 17
 
