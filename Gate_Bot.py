@@ -128,14 +128,15 @@ async def on_error(event, *args, **kwargs):
 async def on_disconnect():
    GPIO.cleanup
 
+bot.run(TOKEN)
 
 # 봇 실행
-try:
-    bot.run(TOKEN)
-except Exception as e:
+#try:
+#    bot.run(TOKEN)
+#except Exception as e:
     # 예기치 못한 종료 시 간부진 채널에 알림 전송
-    channel = bot.get_channel(CHANNEL_ID)
-    if channel is not None:
-        asyncio.run(channel.send(f"⚠️ 봇이 예기치 못한 오류로 종료되었습니다: {e}"))
-finally:
-    GPIO.cleanup()
+#    channel = bot.get_channel(CHANNEL_ID)
+#    if channel is not None:
+#        asyncio.run(channel.send(f"⚠️ 봇이 예기치 못한 오류로 종료되었습니다: {e}"))
+#finally:
+#    GPIO.cleanup()
