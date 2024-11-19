@@ -2,7 +2,7 @@
 import discord
 # discord_bot에 나눈 역할 파일들을 불러옴
 from discord.ext import commands
-from discord_bot.config import TOKEN, CHANNEL_ID, CONTROL_EMOJI, AUTHORIZED_ROLE_ID, DOOR_PIN, BT_ADDR, BT_PORT
+from discord_bot.config import TOKEN, AUTHORIZED_CHANNEL, CONTROL_EMOJI, AUTHORIZED_ROLE_ID, DOOR_PIN, BT_ADDR, BT_PORT
 from discord_bot.gpio_control import setup_gpio, unlock_door, cleanup_gpio
 from discord_bot.bluetooth_control import unlock_door_via_bluetooth
 # 아두이노 패키지
@@ -40,7 +40,7 @@ async def on_message(message):
       
     
     # 지정 채널에 있는 사용자에게 알림 전송(간부진)
-    channel = bot.get_channel(CHANNEL_ID)
+    channel = bot.get_channel(AUTHORIZED_CHANNEL)
         
     if channel is not None:
         await channel.send(f"{message.author.display_name}님이 문을 열어달라고 요청했습니다. "
@@ -65,7 +65,7 @@ async def on_reaction_add(reaction, user):
 
       # 간부진 역할 검증 -> 간부진 역할 부여자만 도어락 제어 권한이 있음  
       if member and any(role.id == AUTHORIZED_ROLE_ID for role in member.roles):
-         channel = bot.get_channel(CHANNEL_ID)
+         channel = bot.get_channel(AUTHORIZED_CHANNEL)
 
          # 간부진 역할과 간부진 채널에 모두 적합한 사용자가 요청에 이모지를 남겼을 때
          if channel is not None:
@@ -88,6 +88,6 @@ async def on_reaction_add(reaction, user):
 @bot.event
 async def on_error(event, *args, **kwargs):
     # 예외 발생 시 지정(간부진) 채널에 알림 전송
-    channel = bot.get_channel(CHANNEL_ID)
+    channel = bot.get_channel(AUTHORIZED_CHANNEL)
     if channel is not None:
         await channel.send("⚠️ 시스템 오류가 발생하여 봇이 작동을 멈췄습니다. 확인이 필요합니다.") #간부
