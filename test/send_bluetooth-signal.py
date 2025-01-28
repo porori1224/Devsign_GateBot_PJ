@@ -3,7 +3,7 @@
 import bluetooth
 
 # HC-05 모듈의 MAC 주소 입력
-bd_addr = "XX:XX:XX:XX:XX:XX"  # HC-05 MAC 주소
+bd_addr = "00:18:E4:36:13:7A"  # HC-05 MAC 주소
 port = 1  # HC-05 기본 포트
 
 def unlock_door():
