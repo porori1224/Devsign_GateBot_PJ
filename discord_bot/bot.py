@@ -1,39 +1,53 @@
-# 디스코드 사용 패키지
 import discord
-# discord_bot에 나눈 역할 파일들을 불러옴
-from discord.ext import commands
-from discord.ext import tasks
-from config import TOKEN, CONTROL_EMOJI, AUTHORIZED_CHANNEL, AUTHORIZED_ROLE_ID, ADMIN_ROLE_ID, ADMIN_CHANNEL, GATE_CHANNEL, DOOR_PIN, BT_ADDR, BT_PORT
-from gpio_control import setup_gpio, unlock_door, cleanup_gpio
-from bluetooth_control import unlock_door_via_bluetooth
-# 기타 패키지
+from discord.ext import commands, tasks
+from config import (TOKEN, CONTROL_EMOJI, AUTHORIZED_CHANNEL, AUTHORIZED_ROLE_ID, ADMIN_ROLE_ID, GATE_CHANNEL, DOOR_PIN, BT_ADDR, BT_PORT)
+from gpio_control import setup_gpio, cleanup_gpio
+from bluetooth_control import unlock_door_via_bluetooth, lock_door_via_bluetooth
+from utils import check_network
 import asyncio
-import os
-
-
+from datetime import datetime
 
 # 디스코드 봇 설정
 intents = discord.Intents.default()
 intents.message_content = True
 intents.reactions = True
 intents.members = True
-
 bot = commands.Bot(command_prefix="!", intents=intents)
-
 
 # GPIO 초기화
 setup_gpio(DOOR_PIN)
 
+# 관리자 역할을 가진 사용자들에게 DM 보내기 함수
+async def send_to_admins(guild, message):
+    """관리자 역할을 가진 모든 사용자에게 개인 DM 전송"""
+    if guild:
+        admins = [member for member in guild.members if any(role.id == ADMIN_ROLE_ID for role in member.roles)]
+        for admin in admins:
+            try:
+                await admin.send(message)
+            except discord.Forbidden:
+                print(f"⚠️ {admin.display_name}님에게 DM을 보낼 수 없습니다.")
+
+# 도어락 자동 잠금 태스크
+@tasks.loop(seconds=35)  # 태스크를 35초마다 실행
+async def auto_lock_task():
+	current_time = datetime.now().strftime("%H:%M")  # 현재 시간을 HH:MM 형식으로 가져옴
+	lock_time = "21:00"  # 도어락 잠금 시간
+	if current_time == lock_time:
+		success = lock_door_via_bluetooth(BT_ADDR, BT_PORT)  # 블루투스로 도어락 잠금
+		channel = bot.get_channel(AUTHORIZED_CHANNEL)
+		message = "🔒 도어락이 자동으로 잠겼습니다." if success else "⚠️ 도어락이 자동으로 잠기지 못했습니다. 확인해주세요."
+		if channel:	#관리 채널로 알림 발송
+			await channel.send(message)
+			
 
 # 봇 시작 이벤트 (관리자 확인)
 @bot.event
 async def on_ready():
-    admin_channel = bot.get_channel(ADMIN_CHANNEL)
-    if admin_channel:
-        await admin_channel.send("✅ 봇이 성공적으로 실행되었습니다. 관리 기능이 활성화됩니다.")  # 봇 실행 알림
-    print(f'{bot.user} has connected to Discord!')  # 실행 터미널 출력
-
-
+    print(f"{bot.user} has connected to Discord!")  # 실행 터미널 출력
+    auto_lock_task.start()  # 자동 잠금 태스크 시작
+    for guild in bot.guilds:
+        await send_to_admins(guild, "✅ 봇이 성공적으로 실행되었습니다. 관리 기능이 활성화됩니다.")
 
 # 메시지 처리 (간부진 역할)
 @bot.event
@@ -43,125 +57,58 @@ async def on_message(message):
 
     # "문열어주세요" 메시지에만 반응
     if message.channel.id == GATE_CHANNEL and message.content.strip() == "문열어주세요":
-        # 요청자에게 개인 DM 전송
-        await message.author.send("✅ 권한 있는 사용자에게 알림을 보냈습니다.")
-
-        # 간부진 채널에 알림
         channel = bot.get_channel(AUTHORIZED_CHANNEL)
-        if channel is not None:
-            await channel.send(
-                f"{message.author.display_name}님이 문을 열어달라고 요청했습니다.\n"
-                f" {CONTROL_EMOJI} 이모지로 반응하여 도어락을 제어할 수 있습니다."
-            )
+        if channel:
+            await channel.send(f"{message.author.display_name}님이 도어락 제어를 요청했습니다.")
         bot.last_requester_message = message  # 마지막 요청 메시지 저장
-    else:
-        # 다른 메시지나 다른 채널에서는 무시
-        return
 
     await bot.process_commands(message)
-
 
 # 이모지 반응에 따른 도어락 제어 (간부진)
 @bot.event
 async def on_reaction_add(reaction, user):
-	# "문열어주세요" 메시지에 올바른 이모지가 추가되었는지 확인
-	if (reaction.message.channel.id == GATE_CHANNEL
-	and reaction.message.content.strip() == "문열어주세요"
-	and reaction.emoji == CONTROL_EMOJI
-	):
-		guild = reaction.message.guild
-		member = guild.get_member(user.id) if guild else None
-		
-		# 간부진 역할 검증
-		if member and any(role.id == AUTHORIZED_ROLE_ID for role in member.roles):
-			channel = bot.get_channel(AUTHORIZED_CHANNEL)
-			admin_channel = bot.get_channel(ADMIN_CHANNEL)
-			
-			# 간부진 채널 알림
-			if channel is not None:
-				await channel.send(f"✅ {user.display_name}님이 도어락을 제어했습니다.")
-			else:
-				if admin_channel is not None:
-					await admin_channel.send("⚠️ 간부진 채널을 찾을 수 없습니다. 설정을 확인하세요.")
-				print("⚠️ 간부진 채널을 찾을 수 없습니다. 설정을 확인하세요.")
-			
-			# 요청 사용자 개인 DM
-			if hasattr(bot, 'last_requester_message') and bot.last_requester_message:
-				requester = bot.last_requester_message.author
-				await requester.send(f"✅ {user.display_name}님이 도어락을 제어했습니다.")
-			
-			# 도어락 제어 함수 호출
-			try:
-				unlock_door(DOOR_PIN)
-				unlock_doorvia_bluetooth(BT_ADDR, BT_PORT)						
-			except Exception as e:
-				# 블루투스 제어 실패 시 관리자 채널에 알림 전송
-				error_message = (f"⚠️ 블루투스 제어 실패: {e}\n" 
-								f"🛠️  확인이 필요합니다.")
-				if channel: 
-					await channel.send(error_message) # 간부진 채널에 알림
-				if admin_channel:
-					await admin_channel.send(error_message) # 관리자 채널에 알림)
-				print(f"Error in Bluetooth control: {e}")
-		
-		else:
-			# 권한 없는 사용자에게 개인 DM
-			try:
-				await user.send("🚫 도어락을 제어할 권한이 없습니다. 관리자로부터 권한을 요청하세요.")
-			except discord.Forbidden:
-				# 개인 DM이 차단된 경우 채널에 알림
-				await reaction.message.channel.send(f"⚠️ {user.display_name}님, 도어락을 제어할 권한이 없습니다. 개인 DM 전송이 차단되어 전체 채널에 알립니다.")
+    if (reaction.message.channel.id == GATE_CHANNEL
+        and reaction.message.content.strip() == "문열어주세요"
+        and reaction.emoji == CONTROL_EMOJI):
+        
+        guild = reaction.message.guild
+        member = guild.get_member(user.id) if guild else None
 
+        if member and any(role.id == AUTHORIZED_ROLE_ID for role in member.roles):
+            channel = bot.get_channel(AUTHORIZED_CHANNEL)
+            if channel:
+                await channel.send(f"✅ {user.display_name}님이 도어락을 제어했습니다.")
 
-# 네트워크 실행 상태 확인
-def check_network():
-	response = os.system("ping -c 1 google.com > /dev/null 2>&1")
-	return response == 0
-if not check_network():
-	print("⚠️ 네트워크 연결이 끊어졌습니다.")
-
+            success = unlock_door_via_bluetooth(BT_ADDR, BT_PORT)
+            if not success:
+                error_message = "⚠️ 블루투스 제어 실패. 확인이 필요합니다."
+                await send_to_admins(guild, error_message)
+                if channel:
+                    await channel.send(error_message)
+        else:
+            try:
+                await user.send("🚫 도어락을 제어할 권한이 없습니다. 관리자로부터 권한을 요청하세요.")
+            except discord.Forbidden:
+                await reaction.message.channel.send(
+                    f"⚠️ {user.display_name}님, 도어락을 제어할 권한이 없습니다. 개인 DM 전송이 차단되었습니다."
+                )
 
 # 네트워크 점검 태스크
-@tasks.loop(minutes = 10)
+@tasks.loop(minutes=10)
 async def network_check_task():
-	if not check_network():
-		adminchannel = bot.get_channel(ADMIN_CHANNEL)
-		if admin_channel:
-			await admin_channel.send("⚠️ 네트워크 연결이 끊어졌습니다. 확인해주세요.")
-		
-	else:
-		print("✅ 네트워크 연결 상태 정상.")
-
-
-# 봇 오류 시 관리자 알림
-@bot.event
-async def on_error(event, *args, **kwargs):
-    admin_channel = bot.get_channel(ADMIN_CHANNEL)
-    if admin_channel:
-        await admin_channel.send("⚠️ 이벤트 {event}에서 예외가 발생했습니다.")
-    print(f"Error occurred in event: {event}: {args} {kwargs}")
-
-
-# 연결 종료 시 관리자 알림
-@bot.event
-async def on_disconnect():
-    admin_channel = bot.get_channel(ADMIN_CHANNEL)
-    if admin_channel:
-        asyncio.creat_task(admin_channel.send("🔌 봇 연결이 끊겼습니다. 연결을 확인해주세요."))
-    cleanup_gpio()
-
+    for guild in bot.guilds:
+        if not check_network():
+            await send_to_admins(guild, "⚠️ 네트워크 연결이 끊어졌습니다. 확인해주세요.")
 
 # 봇 실행 및 종료 처리
 def run_bot():
     try:
-        admin_channel = None
         bot.run(TOKEN)
     except Exception as e:
-        admin_channel = bot.get_channel(ADMIN_CHANNEL)
-        if admin_channel:
-            asyncio.run(admin_channel.send(f"⚠️ 봇이 예기치 못한 오류로 종료되었습니다: {e}"))
+        for guild in bot.guilds:
+            asyncio.run(send_to_admins(guild, f"⚠️ 봇이 예기치 못한 오류로 종료되었습니다: {e}"))
     finally:
         cleanup_gpio()
-        if admin_channel:
-            asyncio.run(admin_channel.send("🛠️ 봇이 종료되었습니다. 관리 작업 완료 후 다시 시작하세요."))
+        for guild in bot.guilds:
+            asyncio.run(send_to_admins(guild, "🛠️ 봇이 종료되었습니다. 관리 작업 완료 후 다시 시작하세요."))
 
