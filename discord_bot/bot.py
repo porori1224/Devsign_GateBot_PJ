@@ -29,7 +29,7 @@ async def send_to_admins(guild, message):
                 print(f"⚠️ {admin.display_name}님에게 DM을 보낼 수 없습니다.")
 
 # 도어락 자동 잠금 태스크
-@tasks.loop(seconds=35)  # 태스크를 35초마다 실행
+@tasks.loop(minutes=1)  # 태스크를 1분마다 실행
 async def auto_lock_task():
 	current_time = datetime.now().strftime("%H:%M")  # 현재 시간을 HH:MM 형식으로 가져옴
 	lock_time = "21:00"  # 도어락 잠금 시간
@@ -75,11 +75,12 @@ async def on_reaction_add(reaction, user):
         member = guild.get_member(user.id) if guild else None
 
         if member and any(role.id == AUTHORIZED_ROLE_ID for role in member.roles):
+            success = unlock_door_via_bluetooth(BT_ADDR, BT_PORT)
+            
             channel = bot.get_channel(AUTHORIZED_CHANNEL)
             if channel:
                 await channel.send(f"✅ {user.display_name}님이 도어락을 제어했습니다.")
 
-            success = unlock_door_via_bluetooth(BT_ADDR, BT_PORT)
             if not success:
                 error_message = "⚠️ 블루투스 제어 실패. 확인이 필요합니다."
                 await send_to_admins(guild, error_message)
