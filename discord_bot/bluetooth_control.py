@@ -1,7 +1,7 @@
 import bluetooth  # 블루투스 통신을 위한 패키지
 
 # 블루투스 연결로 도어락 제어
-def unlock_door_via_bluetooth(bt_addr, bt_port, retries=3, delay=2): #retries=10, delay=0.5 정도로 수정필요
+def unlock_door_via_bluetooth(bt_addr, bt_port, retries=10, delay=0.5):
     for attempt in range(1, retries + 1):
         try:
             sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
@@ -15,7 +15,7 @@ def unlock_door_via_bluetooth(bt_addr, bt_port, retries=3, delay=2): #retries=10
     return False  # 모든 시도가 실패하면 False 반환
 
 # 블루투스 연결로 도어락 잠금
-def lock_door_via_bluetooth(bt_addr, bt_port, retries=3, delay=2):
+def lock_door_via_bluetooth(bt_addr, bt_port, retries=10, delay=0.5):
     for attempt in range(1, retries + 1):
         try:
             sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
